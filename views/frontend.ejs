@@ -144,6 +144,7 @@
         for (const image of data) {
           try {
             const response = await fetch(image.url);
+            //fetch is giving an error in localhost because of cors.
             const blob = await response.blob();
             var ref = firebase.storage().ref().child(`images/${Email}/${i}`);
             await ref.put(blob);
