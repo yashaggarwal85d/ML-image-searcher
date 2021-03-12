@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <style>
+      body {
+        justify-content: center;
+        align-items: center;
+        background: #000;
+        display: flex;
+        height: 100vh;
+        padding: 0;
+        margin: 0;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+    <title>Image searcher</title>
+  </head>
+
+  <body translate="no">
+    <form onsubmit="event.preventDefault();myfunc()">
+      <div
+        class="align-middle d-flex justify-content-center align-items-center"
+      >
+        <div>
+          <label class="form-label" for="email">Email Address</label>
+          <input
+            required
+            name="email"
+            type="email"
+            class="form-control"
+            id="email"
+            placeholder="yourname@gmail.com"
+          />
+          <br />
+          <label class="form-label" for="search">Search</label>
+          <input
+            required
+            name="search"
+            type="text"
+            class="form-control"
+            id="search"
+            placeholder="bike"
+          />
+          <br />
+          <label class="form-label" for="count">#</label>
+          <input
+            required
+            name="count"
+            type="number"
+            class="form-control"
+            id="count"
+            placeholder="10"
+          />
+          <br />
+
+          <button type="submit" id="submit" class="btn btn-success">
+            Search
+          </button>
+          <br />
+          <div id="progressDiv" class="hidden">
+            <label for="file">Downloading progress:</label>
+            <br />
+            <progress
+              name="progress"
+              id="progress"
+              value="0"
+              style="height: 40px; width: 100%"
+              max="100"
+            ></progress>
+          </div>
+        </div>
+      </div>
+    </form>
+    <script src="https://www.gstatic.com/firebasejs/8.3.0/firebase-app.js"></script>
+
+    <!-- If you enabled Analytics in your project, add the Firebase SDK for Analytics -->
+    <script src="https://www.gstatic.com/firebasejs/8.3.0/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.3.0/firebase-storage.js"></script>
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/8.3.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.3.0/firebase-firestore.js"></script>
+
+    <script type="text/javascript">
+      var email = document.getElementById("email");
+      var count = document.getElementById("count");
+      var search = document.getElementById("search");
+      var submitButton = document.getElementById("submit");
+      var ProgressBar = document.getElementById("progressDiv");
+      var progress = document.getElementById("progress");
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCEEe5psvrJ0fPkNmnOiIIQAOxp19GqxDI",
+        authDomain: "images-440de.firebaseapp.com",
+        projectId: "images-440de",
+        storageBucket: "images-440de.appspot.com",
+        messagingSenderId: "726069110596",
+        appId: "1:726069110596:web:2492b8ea4200c456e89911",
+        measurementId: "G-RNRHKTY4J6",
+      };
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      async function myfunc() {
+        const Email = email.value;
+        const Count = count.value;
+        const Search = search.value;
+        submitButton.remove();
+        ProgressBar.classList.remove("hidden");
+
+        progress.value = 20;
+        alert("Do not refresh/exit the page");
+
+        var data = await fetch("/", {
+          headers: { "Content-Type": "application/json; charset=UTF-8" },
+          method: "POST",
+          body: JSON.stringify({
+            email: Email,
+            count: Count,
+            search: Search,
+          }),
+        })
+          .then((res) => {
+            return res.json();
+          })
+          .catch((err) => console.error(err));
+        progress.value = 50;
+        var i = 0;
+        var text = "";
+        for (const image of data) {
+          try {
+            const response = await fetch(image.url);
+            const blob = await response.blob();
+            var ref = firebase.storage().ref().child(`images/${Email}/${i}`);
+            await ref.put(blob);
+            i = i + 1;
+            var download_url = await ref.getDownloadURL();
+            text = text + "\n" + `Link ${i} - ` + download_url;
+          } catch (e) {
+            console.log(e);
+          }
+        }
+        progress.value = 80;
+        var sendMail = await fetch("/sendMail", {
+          headers: { "Content-Type": "application/json; charset=UTF-8" },
+          method: "POST",
+          body: JSON.stringify({
+            count: Count,
+            search: Search,
+            email: Email,
+            text: text,
+          }),
+        })
+          .then((res) => {
+            return res.json();
+          })
+          .catch((err) => console.error(err));
+        progress.value = 100;
+        alert("Check Your Email");
+      }
+    </script>
+
+    <script
+      src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+      integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+      integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+      integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
